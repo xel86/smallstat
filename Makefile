@@ -2,7 +2,7 @@ SRC_DIR := src
 OBJ_DIR := bin/obj
 BIN_DIR := bin
 
-EXE := $(BIN_DIR)/effectus
+EXE := $(BIN_DIR)/smallstat
 SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
