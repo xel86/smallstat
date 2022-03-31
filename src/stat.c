@@ -16,13 +16,13 @@ void get_stat_snapshot(struct snapshot *snap, const char *pid) {
     FILE *f_pid_stat = fopen(path, "r");
     FILE *f_stat = fopen("/proc/stat", "r");
     if (f_pid_stat == NULL) {
-        fprintf(stderr, "Could not open %s with error %s, exiting.", path,
+        fprintf(stderr, "\nCould not open %s with error %s, exiting.", path,
                 strerror(errno));
         exit(1);
     }
 
     if (f_stat == NULL) {
-        fprintf(stderr, "Could not open /proc/stat with error %s, exiting.",
+        fprintf(stderr, "\nCould not open /proc/stat with error %s, exiting.",
                 strerror(errno));
         exit(1);
     }
@@ -36,7 +36,7 @@ void get_stat_snapshot(struct snapshot *snap, const char *pid) {
 
     fclose(f_pid_stat);
     if (matches != 7) {
-        fprintf(stderr, "Failed to parse all values from %s, exiting", path);
+        fprintf(stderr, "\nFailed to parse all values from %s, exiting", path);
         exit(1);
     }
 
@@ -51,7 +51,7 @@ void get_stat_snapshot(struct snapshot *snap, const char *pid) {
 
     fclose(f_stat);
     if (matches != 10) {
-        fprintf(stderr, "Failed to parse cpu time from /proc/stat, exiting");
+        fprintf(stderr, "\nFailed to parse cpu time from /proc/stat, exiting");
         exit(1);
     }
 

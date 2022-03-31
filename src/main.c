@@ -5,6 +5,18 @@
 
 #include "stat.h"
 
+const char *units[] = {"B", "KB", "MB", "GB", "TB", "PB"};
+char *bytes_to_human_readable(char *str, double bytes) {
+    int i = 0;
+    while (bytes > 1000) {
+        bytes /= 1000;
+        i++;
+    }
+
+    sprintf(str, "%.*f%s", i, bytes, units[i]);
+    return str;
+}
+
 int string_to_int(const char *str) {
     int value = 0;
 
@@ -17,11 +29,10 @@ int string_to_int(const char *str) {
 }
 
 void print_help() {
-    printf("\nUsage: smallstat [OPTION]...");
+    printf("\nUsage: smallstat [PID] [OPTION]...");
     printf("\nMonitor process cpu usage, peak, and average overtime.");
-    printf("\nExample: smallstat -p 1234\n");
+    printf("\nExample: smallstat 1234\n");
     printf("\nArguments:");
-    printf("\n  -p [PID]\tPID of process to monitor");
     printf("\n  -i [int]\tUpdate interval in seconds");
     printf("\n  -a      \tCPU usage percentage will be relative to all cores.");
     printf("\n");
@@ -35,9 +46,6 @@ void get_opts(int argc, char **argv, char **pid, int *interval, int *ncores) {
             case 'h':
                 print_help();
                 exit(1);
-            case 'p':
-                *pid = optarg;
-                break;
             case 'i':
                 *interval = string_to_int(optarg);
                 break;
@@ -45,10 +53,7 @@ void get_opts(int argc, char **argv, char **pid, int *interval, int *ncores) {
                 *ncores = 1;
                 break;
             case '?':
-                if (optopt == 'p')
-                    fprintf(stderr,
-                            "Option -p requires a pid as an argument. \n");
-                else if (optopt == 'i')
+                if (optopt == 'i')
                     fprintf(
                         stderr,
                         "Option -i requires a update interval in seconds. \n");
@@ -62,6 +67,15 @@ void get_opts(int argc, char **argv, char **pid, int *interval, int *ncores) {
                 exit(1);
         }
     }
+
+    if (optind == argc) {
+        fprintf(stderr,
+                "Need to provide a PID to track (ex: smallstat 1234)\n");
+        print_help();
+        exit(1);
+    }
+
+    *pid = argv[optind];
 }
 
 void get_comm_name(char *target, const char *pid) {
@@ -89,7 +103,7 @@ int main(int argc, char **argv) {
     get_opts(argc, argv, &pid, &update_interval, &ncores);
 
     if (pid == NULL) {
-        fprintf(stderr, "Need to provide a PID to monitor. (-p 1234)\n");
+        fprintf(stderr, "Need to provide a PID to monitor. (smallstat 1234)\n");
         print_help();
         exit(1);
     }
@@ -111,6 +125,7 @@ int main(int argc, char **argv) {
     unsigned long long updates = 0;
     double peak = 0.0;
     double avg = 0.0;
+
     while (1) {
         struct snapshot old, new;
         unsigned long new_ticks, old_ticks;
@@ -119,6 +134,15 @@ int main(int argc, char **argv) {
         old_ticks = old.utime + old.stime + old.cutime + old.cstime;
 
         sleep(update_interval);
+
+        if (updates != 0) {
+            /* Clears CPU usage line, moves up one, clears memory usage line
+             * https://en.wikipedia.org/wiki/ANSI_escape_code */
+            printf("\x1b[2K");
+            printf("\x1b[1A");
+            printf("\x1b[2K");
+            printf("\r");
+        }
 
         get_stat_snapshot(&new, pid);
         new_ticks = new.utime + new.stime + new.cutime + new.cstime;
@@ -132,8 +156,11 @@ int main(int argc, char **argv) {
         avg = (updates * avg + cpu_usage) / (updates + 1);
         updates++;
 
-        printf("\r    CPU Usage (%%): %.03lf Average: %.03lf Peak: %.03lf ",
+        char mem[32];
+        printf("    CPU Usage (%%): %.03lf Average: %.03lf Peak: %.03lf \n",
                cpu_usage, avg, peak);
+        printf("    MEM Usage (RSS): %s",
+               bytes_to_human_readable(mem, new.rss));
 
         fflush(stdout);
     }
